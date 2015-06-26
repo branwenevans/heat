@@ -1,0 +1,157 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>Maps!</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            html, body{
+                height: 100%;
+                margin: 0px;
+                padding: 0px
+            }
+            #map {
+                height: 100%;
+                width: 60%;
+                float: left;
+            }
+            #controls {
+                height: 100%;
+                width: 40%;
+                background: lightsteelblue;
+                float: right;
+            }
+            #controls input {
+                margin: 5px;
+                padding: 5px;
+            }
+            #search, #pointsList{
+                width: 65%;
+                margin: 5px;
+            }
+        </style>
+
+        <link rel="stylesheet" href="css/main.css">
+    </head>
+    <body>
+
+        <div id="map"></div>
+        <div id="controls">
+            <form>
+                <input id="lat" type="number" min="-90" max="90" placeholder="latitude"/>
+                <input id="lng" type="number" min="-180" max="180" placeholder="longitude"/>
+                <span>or</span>
+                <input id="search" placeholder="search for a place"/>
+                <input type="button" value="Center on location" onclick="centerMap()">
+            </form>
+
+            <select id="pointsList" size="10" placeholder="nothing here yet">
+            </select>
+            <input type="button" value="Delete point" onclick="deletePoint()">
+        </div>
+
+
+
+        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=places,visualization"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="js/plugins.js"></script>
+        <script src="js/main.js"></script>
+        <script>
+
+            var map;
+            var searchBox;
+            var points = []
+            var heatmap;
+
+            function initialize() {
+
+
+                var mapOptions = {
+                    zoom: 12,
+                    center: new google.maps.LatLng(33.812039, -117.919060), //start at some place
+                    disableDefaultUI: true
+                };
+
+                map = new google.maps.Map(document.getElementById('map'),
+                    mapOptions);
+
+
+                heatmap = new google.maps.visualization.HeatmapLayer({
+                    data: points
+                });
+
+                var gradient = [
+                    'rgba(0, 255, 255, 0)',
+                    'rgba(252, 239, 5, 0.7)',
+                    'rgba(252, 155, 5, 1)',
+                    'rgba(255, 0, 0, 1)'
+                ]
+
+                heatmap.setMap(map);
+                heatmap.set('gradient', gradient);
+                heatmap.set('radius', 100);
+
+                if(navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        var userLocation = position.coords;
+                        map.setCenter(new google.maps.LatLng(userLocation.latitude, userLocation.longitude));
+                    });
+
+                    searchBox = new google.maps.places.SearchBox(((document.getElementById('search'))));
+                    google.maps.event.addListener(searchBox, 'places_changed', placeSelected);
+                }
+            }
+
+            function centerMap() {
+                var lat = $("#lat").val();
+                var lng = $("#lng").val();
+                if (lat && lng) {
+                    var point = new google.maps.LatLng(lat, lng);
+
+                    map.panTo(point);
+
+                    points.push(point);
+                    heatmap.set('data', points);
+
+                    $('#pointsList').append("<option>"+point+"</option>");
+                }
+            }
+
+            function placeSelected(){
+                var places = searchBox.getPlaces();
+
+                if (places.length == 0) {
+                    return;
+                }
+
+                document.getElementById('lat').value = places[0].geometry.location.lat();
+                document.getElementById('lng').value = places[0].geometry.location.lng();
+            }
+
+            function deletePoint(){
+                var selected = $('#pointsList option:selected');
+
+                if(selected.length == 0){
+                    return;
+                }
+
+                points.pop(getCoordFromString(selected.val()));
+                heatmap.set('data', points);
+
+                selected.remove();
+
+                function getCoordFromString(coordString) {
+                    var coord = coordString.split(',')
+                    return new google.maps.LatLng(parseFloat(coord[0]), parseFloat(coord[1]));
+                }
+            }
+
+            //account for zoom
+            //export map image
+
+            google.maps.event.addDomListener(window, 'load', initialize);
+        </script>
+    </body>
+</html>
